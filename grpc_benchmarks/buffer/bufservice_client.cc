@@ -42,6 +42,7 @@
 #include "bufstreaming.grpc.pb.h"
 
 #define NBZERO 1000 // benchmark iterations for handshake overhead
+#define BUFSIZE 16384 // buffer size
 
 using grpc::Channel;
 using grpc::ClientContext;
@@ -119,7 +120,7 @@ int main(int argc, char** argv) {
     // localhost at port 50051). We indicate that the channel isn't authenticated
     // (use of InsecureChannelCredentials()).
     BufferServiceClient bufservice(grpc::CreateChannel(
-	    "localhost:50051", grpc::InsecureChannelCredentials()), 1638400); // max 64 kB
+	    "geeker-4.news.cs.nyu.edu:50051", grpc::InsecureChannelCredentials()), BUFSIZE);
 
     // run benchmark to measure roundtrip overhead.
     t = clock();
@@ -137,7 +138,5 @@ int main(int argc, char** argv) {
 	       << ", " << reply*4
 	       << ", " << tzero / NBZERO
 	       << ", " << tsend / ((double)b) << std::endl;
-    
     return 0;
 }
-
