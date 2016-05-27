@@ -1,0 +1,119 @@
+/*
+ *
+ * Copyright 2015, Google Inc.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ *     * Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above
+ * copyright notice, this list of conditions and the following disclaimer
+ * in the documentation and/or other materials provided with the
+ * distribution.
+ *     * Neither the name of Google Inc. nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+#include <iostream>
+#include <memory>
+#include <string>
+#include <time.h>
+
+#include <grpc++/grpc++.h>
+
+#include "bufstreaming.grpc.pb.h"
+
+using grpc::Channel;
+using grpc::ClientContext;
+using grpc::ClientReader;
+using grpc::Status;
+using bufstreamingrpc::ReadRequest;
+using bufstreamingrpc::Data;
+using bufstreamingrpc::BufferService;
+
+class BufferServiceClient {
+ public:
+    BufferServiceClient(std::shared_ptr<Channel> channel, int nmax)
+      : stub_(BufferService::NewStub(channel)) {
+      buf = new unsigned int[nmax];
+  }
+
+  // Assambles the client's payload, sends it and presents the response back
+  // from the server.
+  int Read(const int& num_bytes) {
+    // Data we are sending to the server.
+    ReadRequest request;
+    request.set_num_bytes(num_bytes);
+
+    // Container for the data we expect from the server.
+    Data reply;
+
+    // Context for the client. It could be used to convey extra information to
+    // the server and/or tweak certain RPC behaviors.
+    ClientContext context;
+
+    // Read byte stream from reader.
+    std::unique_ptr<ClientReader<Data> > reader(stub_->Read(&context, request));
+    int n = 0;
+    while(reader->Read(&reply)) {
+	buf[n] = reply.val();
+	n++;
+    }
+    Status status = reader->Finish();
+    
+    // Act upon its status.
+    if (status.ok()) {
+      return n;
+    } else {
+      return -1;
+    }
+  }
+
+  void PrintBuf(const int n) {
+      int i;
+      for (i = 0; i < n; i++)
+	  std::cout << buf[i] << std::endl;
+  }
+    
+
+ private:
+  std::unique_ptr<BufferService::Stub> stub_;
+  // refrence to a buffer of 4 byte uints
+  unsigned int *buf;
+};
+
+int main(int argc, char** argv) {
+    // Instantiate the client. It requires a channel, out of which the actual RPCs
+    // are created. This channel models a connection to an endpoint (in this case,
+    // localhost at port 50051). We indicate that the channel isn't authenticated
+    // (use of InsecureChannelCredentials()).
+    BufferServiceClient bufservice(grpc::CreateChannel(
+	    "localhost:50051", grpc::InsecureChannelCredentials()), 1638400); // max 64 kB
+    int nints = 1024;
+    int i, reply;
+    clock_t t;
+    t = clock();
+    for (i = 0; i < 1000; i++)
+	reply = bufservice.Read(nints);
+    double time_taken = ((double)t)/CLOCKS_PER_SEC;
+    std::cout << "Client received nbytes: " << reply*4 << std::endl;
+    std::cout << "time (s): " << time_taken/1000 << std::endl;
+    return 0;
+}
+
