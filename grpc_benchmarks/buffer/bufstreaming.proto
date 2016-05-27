@@ -34,13 +34,13 @@ option objc_class_prefix = "HSW";
 
 package bufstreamingrpc;
 
-// The greeting service definition.
+// The buffer service definition
 service BufferService {
   // Send streams DataResponses to the client
   rpc Send (BufRequest) returns (stream DataResponse) {}
 }
 
-// The request message containing how many objects they want.
+// The request message containing how many ints are sent
 message BufRequest {
   int32 n = 1;
 }
