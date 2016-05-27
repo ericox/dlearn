@@ -107,12 +107,20 @@ int main(int argc, char** argv) {
     int nints = 1024;
     int i, reply;
     clock_t t;
+    // run benchmark to measure handshaking + roundtrip.
+    t = clock();
+    for (i = 0; i < 1000; i++)
+	reply = bufservice.Send(0);
+    double tzero = ((double)t)/CLOCKS_PER_SEC;
+
+    // run benchmark for send
     t = clock();
     for (i = 0; i < 1000; i++)
 	reply = bufservice.Send(nints);
-    double time_taken = ((double)t)/CLOCKS_PER_SEC;
-    std::cout << "Client received nbytes: " << reply*4 << std::endl;
-    std::cout << "time (s): " << time_taken/1000 << std::endl;
+    double tsend = ((double)t)/CLOCKS_PER_SEC;
+    
+    std::cout << "n, nbytes, tzero, tsend " << std::endl;
+    std::cout  << nints << ", " << reply*4 << ", " << tzero/1000 << ", " << tsend/1000 << std::endl;
     return 0;
 }
 

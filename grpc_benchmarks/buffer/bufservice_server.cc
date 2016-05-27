@@ -39,6 +39,8 @@
 
 #include "bufstreaming.grpc.pb.h"
 
+#define MAXBUFFER 1 << 13 // maximum buffer size for 2**13 weight size
+
 using grpc::Server;
 using grpc::ServerBuilder;
 using grpc::ServerContext;
@@ -53,31 +55,31 @@ class BufferServiceImpl final : public BufferService::Service {
  public:
     BufferServiceImpl(const int nmax) {
 	int i;
-	buf = new unsigned int[nmax];
 	// init buffer with arbitrary data
-	for (i = 0; i < nmax; i++)
-	    buf[i] = i;
+	for (i = 0; i < nmax; i++) {
+	    DataResponse *d = new DataResponse;
+	    d->set_val(i);
+	    buf[i] = d;
+	}
     };
+    
   Status Send(ServerContext* context, const BufRequest* request,
 	      ServerWriter<DataResponse>* writer) override {
       int i;
       int n = request->n();
-      DataResponse *d = new DataResponse;
-      std::cout << "writing " << n << " bytes to client" << std::endl;
       for (i = 0; i < n; i++) {
-	  d->set_val(buf[i]);
-	  writer->Write(*d);
+	  writer->Write(*buf[i]);
       }
     return Status::OK;
   }
  private:
-  unsigned int *buf;
+   DataResponse *buf[MAXBUFFER];
   
 };
 
 void RunServer() {
   std::string server_address("0.0.0.0:50051");
-  BufferServiceImpl service(16384); // 64 KB
+  BufferServiceImpl service(MAXBUFFER);
 
   ServerBuilder builder; 
   // Listen on the given address without any authentication mechanism.
