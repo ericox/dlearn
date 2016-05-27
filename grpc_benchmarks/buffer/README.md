@@ -11,7 +11,7 @@ Here's our service definition, defined using protocol buffers IDL in
 service has one method, `send`, that lets the server receive a single
 `BufRequest` message from the remote client containing the desired number of
 unsigned long ints, then the server send a streaming response containing n
-messages each in a single `DataReply` message.
+messages each in a single `DataResponse` message.
 
 ```protobuf
 syntax = "proto3";
@@ -35,7 +35,6 @@ message DataResponse {
 }
 ```
 
-<a name="generating"></a>
 ### Generating gRPC code
 
 To generate the client and server side interfaces:
@@ -50,70 +49,26 @@ $ protoc -I ../../protos/ --grpc_out=. --plugin=protoc-gen-grpc=grpc_cpp_plugin 
 $ protoc -I ../../protos/ --cpp_out=. ./bufstreaming.proto
 ```
 
-### Writing a client
+### Running Benchmarks
 
-- Create a channel. A channel is a logical connection to an endpoint. A gRPC
-  channel can be created with the target address, credentials to use and
-  arguments as follows
+- Assuming that a `bufservice_server` is running on a machine to run the benchmarks
 
-    ```cpp
-    auto channel = CreateChannel("localhost:50051", InsecureChannelCredentials());
+    ```bash
+    cd dlearn/grpc_benchmarks
+    ./run_send_buffer.sh
     ```
 
-- Create a stub. A stub implements the rpc methods of a service and in the
-  generated code, a method is provided to created a stub with a channel:
+- This writes a results file to the current working dir with data format
 
-    ```cpp
-    auto stub = bufservice::BufferService::NewStub(channel);
-    ```
+   ```
+   N, Bytes,  t base (s), t send (s)
+   ```
 
-- Make a unary rpc, with `ClientContext` and request/response proto messages.
+where
 
-    ```cpp
-    ClientContext context;
-    ReadRequest request;
-    request.set_n(1000);
-    Data reply;
-    Status status = stub->Read(&context, request, &reply);
-    ```
-
-- Check returned status and response.
-
-    ```cpp
-    if (status.ok()) {
-      // check reply.message()
-    } else {
-      // rpc failed.
-    }
-    ```
-
-For a working example, refer to [greeter_client.cc](greeter_client.cc).
-
-### Writing a server
-
-- Implement the service interface
-
-    ```cpp
-    class GreeterServiceImpl final : public Greeter::Service {
-      Status SayHello(ServerContext* context, const HelloRequest* request,
-          HelloReply* reply) override {
-        std::string prefix("Hello ");
-        reply->set_message(prefix + request->name());
-        return Status::OK;
-      }
-    };
-
-    ```
-
-- Build a server exporting the service
-
-    ```cpp
-    GreeterServiceImpl service;
-    ServerBuilder builder;
-    builder.AddListeningPort("0.0.0.0:50051", grpc::InsecureServerCredentials());
-    builder.RegisterService(&service);
-    std::unique_ptr<Server> server(builder.BuildAndStart());
-    ```
-
+- N is the number of DataResponses streamed from server to client
+- Bytes is the number of bytes sent
+- t base is the time to send zero bytes (handshaking etc...)
+- t send is the elapsed time to complete a send request from client to server
 
 
