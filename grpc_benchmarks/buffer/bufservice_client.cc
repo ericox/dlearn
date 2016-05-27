@@ -43,8 +43,8 @@ using grpc::Channel;
 using grpc::ClientContext;
 using grpc::ClientReader;
 using grpc::Status;
-using bufstreamingrpc::ReadRequest;
-using bufstreamingrpc::Data;
+using bufstreamingrpc::BufRequest;
+using bufstreamingrpc::DataResponse;
 using bufstreamingrpc::BufferService;
 
 class BufferServiceClient {
@@ -56,20 +56,20 @@ class BufferServiceClient {
 
   // Assambles the client's payload, sends it and presents the response back
   // from the server.
-  int Read(const int& num_bytes) {
+  int Send(const int& ndata) {
     // Data we are sending to the server.
-    ReadRequest request;
-    request.set_num_bytes(num_bytes);
+    BufRequest request;
+    request.set_n(ndata);
 
     // Container for the data we expect from the server.
-    Data reply;
+    DataResponse reply;
 
     // Context for the client. It could be used to convey extra information to
     // the server and/or tweak certain RPC behaviors.
     ClientContext context;
 
     // Read byte stream from reader.
-    std::unique_ptr<ClientReader<Data> > reader(stub_->Read(&context, request));
+    std::unique_ptr<ClientReader<DataResponse> > reader(stub_->Send(&context, request));
     int n = 0;
     while(reader->Read(&reply)) {
 	buf[n] = reply.val();
@@ -91,7 +91,6 @@ class BufferServiceClient {
 	  std::cout << buf[i] << std::endl;
   }
     
-
  private:
   std::unique_ptr<BufferService::Stub> stub_;
   // refrence to a buffer of 4 byte uints
@@ -110,7 +109,7 @@ int main(int argc, char** argv) {
     clock_t t;
     t = clock();
     for (i = 0; i < 1000; i++)
-	reply = bufservice.Read(nints);
+	reply = bufservice.Send(nints);
     double time_taken = ((double)t)/CLOCKS_PER_SEC;
     std::cout << "Client received nbytes: " << reply*4 << std::endl;
     std::cout << "time (s): " << time_taken/1000 << std::endl;

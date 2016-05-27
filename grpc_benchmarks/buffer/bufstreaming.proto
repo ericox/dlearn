@@ -36,16 +36,16 @@ package bufstreamingrpc;
 
 // The greeting service definition.
 service BufferService {
-  // Sends multiple greetings
-  rpc Read (ReadRequest) returns (stream Data) {}
+  // Send streams DataResponses to the client
+  rpc Send (BufRequest) returns (stream DataResponse) {}
 }
 
-// The request message containing how many bytes they want.
-message ReadRequest {
-  int32 num_bytes = 1;
+// The request message containing how many objects they want.
+message BufRequest {
+  int32 n = 1;
 }
 
 // A response message containing data
-message Data {
+message DataResponse {
   fixed32 val = 1;
 }

@@ -44,8 +44,8 @@ using grpc::ServerBuilder;
 using grpc::ServerContext;
 using grpc::ServerWriter;
 using grpc::Status;
-using bufstreamingrpc::ReadRequest;
-using bufstreamingrpc::Data;
+using bufstreamingrpc::BufRequest;
+using bufstreamingrpc::DataResponse;
 using bufstreamingrpc::BufferService;
 
 // Logic and data behind the server's behavior.
@@ -58,11 +58,11 @@ class BufferServiceImpl final : public BufferService::Service {
 	for (i = 0; i < nmax; i++)
 	    buf[i] = i;
     };
-  Status Read(ServerContext* context, const ReadRequest* request,
-	      ServerWriter<Data>* writer) override {
+  Status Send(ServerContext* context, const BufRequest* request,
+	      ServerWriter<DataResponse>* writer) override {
       int i;
-      int n = request->num_bytes();
-      Data *d = new Data;
+      int n = request->n();
+      DataResponse *d = new DataResponse;
       std::cout << "writing " << n << " bytes to client" << std::endl;
       for (i = 0; i < n; i++) {
 	  d->set_val(buf[i]);
