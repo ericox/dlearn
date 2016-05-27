@@ -39,7 +39,7 @@
 
 #include "bufstreaming.grpc.pb.h"
 
-#define MAXBUFFER 1 << 13 // maximum buffer size for 2**13 weight size
+#define BUFSIZE 1 << 12 // maximum buffer size 2**12
 
 using grpc::Server;
 using grpc::ServerBuilder;
@@ -61,25 +61,32 @@ class BufferServiceImpl final : public BufferService::Service {
 	    d->set_val(i);
 	    buf[i] = d;
 	}
+	std::cout << i << std::endl;
     };
     
   Status Send(ServerContext* context, const BufRequest* request,
 	      ServerWriter<DataResponse>* writer) override {
       int i;
-      int n = request->n();
-      for (i = 0; i < n; i++) {
-	  writer->Write(*buf[i]);
+      long int n = request->n();
+      long int nsent = 0;
+      // Repeatedly send from buf until request is filled. This allows us to
+      // send large amounts of data without reaching system limits for an
+      // array size on buf.
+      nsent = 0;
+      for (i = 0; nsent < n && n > 0; i++) {
+	      writer->Write(*buf[i % BUFSIZE]);
+	      nsent++;
       }
     return Status::OK;
   }
  private:
-   DataResponse *buf[MAXBUFFER];
+   DataResponse *buf[BUFSIZE];
   
 };
 
 void RunServer() {
   std::string server_address("0.0.0.0:50051");
-  BufferServiceImpl service(MAXBUFFER);
+  BufferServiceImpl service(BUFSIZE);
 
   ServerBuilder builder; 
   // Listen on the given address without any authentication mechanism.

@@ -34,10 +34,14 @@
 #include <memory>
 #include <string>
 #include <time.h>
+#include <unistd.h>
+#include <stdlib.h>
 
 #include <grpc++/grpc++.h>
 
 #include "bufstreaming.grpc.pb.h"
+
+#define NBZERO 1000 // benchmark iterations for handshake overhead
 
 using grpc::Channel;
 using grpc::ClientContext;
@@ -49,14 +53,15 @@ using bufstreamingrpc::BufferService;
 
 class BufferServiceClient {
  public:
-    BufferServiceClient(std::shared_ptr<Channel> channel, int nmax)
+    BufferServiceClient(std::shared_ptr<Channel> channel, int n)
       : stub_(BufferService::NewStub(channel)) {
-      buf = new unsigned int[nmax];
+	nmax = n;
+	buf = new unsigned int[nmax];
   }
 
   // Assambles the client's payload, sends it and presents the response back
   // from the server.
-  int Send(const int& ndata) {
+  int Send(const long int& ndata) {
     // Data we are sending to the server.
     BufRequest request;
     request.set_n(ndata);
@@ -72,7 +77,7 @@ class BufferServiceClient {
     std::unique_ptr<ClientReader<DataResponse> > reader(stub_->Send(&context, request));
     int n = 0;
     while(reader->Read(&reply)) {
-	buf[n] = reply.val();
+	buf[n % nmax] = reply.val(); // rewrite buffer using mod
 	n++;
     }
     Status status = reader->Finish();
@@ -92,35 +97,47 @@ class BufferServiceClient {
   }
     
  private:
-  std::unique_ptr<BufferService::Stub> stub_;
-  // refrence to a buffer of 4 byte uints
-  unsigned int *buf;
+    std::unique_ptr<BufferService::Stub> stub_;
+    // refrence to a buffer of 4 byte uints
+    unsigned int *buf;
+    int nmax;
 };
 
 int main(int argc, char** argv) {
+    int i, reply;
+    clock_t t;
+    int nints, b;
+    if (argc < 3) {
+	std::cout << "usage: bufservice_client NINTS BENCHMARKITER" << std::endl;
+	return 1;
+    }
+    nints = atoi(argv[1]);
+    b = atoi(argv[2]);
+
     // Instantiate the client. It requires a channel, out of which the actual RPCs
     // are created. This channel models a connection to an endpoint (in this case,
     // localhost at port 50051). We indicate that the channel isn't authenticated
     // (use of InsecureChannelCredentials()).
     BufferServiceClient bufservice(grpc::CreateChannel(
 	    "localhost:50051", grpc::InsecureChannelCredentials()), 1638400); // max 64 kB
-    int nints = 1024;
-    int i, reply;
-    clock_t t;
-    // run benchmark to measure handshaking + roundtrip.
+
+    // run benchmark to measure roundtrip overhead.
     t = clock();
-    for (i = 0; i < 1000; i++)
+    for (i = 0; i < NBZERO; i++)
 	reply = bufservice.Send(0);
-    double tzero = ((double)t)/CLOCKS_PER_SEC;
+    double tzero = ((double)clock() - (double)t)/CLOCKS_PER_SEC;
 
     // run benchmark for send
     t = clock();
-    for (i = 0; i < 1000; i++)
+    for (i = 0; i < b; i++)
 	reply = bufservice.Send(nints);
-    double tsend = ((double)t)/CLOCKS_PER_SEC;
+    double tsend = ((double)clock() - (double)t)/CLOCKS_PER_SEC;
+
+    std::cout  << reply
+	       << ", " << reply*4
+	       << ", " << tzero / NBZERO
+	       << ", " << tsend / ((double)b) << std::endl;
     
-    std::cout << "n, nbytes, tzero, tsend " << std::endl;
-    std::cout  << nints << ", " << reply*4 << ", " << tzero/1000 << ", " << tsend/1000 << std::endl;
     return 0;
 }
 
