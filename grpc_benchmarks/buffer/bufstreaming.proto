@@ -42,10 +42,10 @@ service BufferService {
 
 // The request message containing how many ints are sent
 message BufRequest {
-  int32 n = 1;
+  int32 payload_size = 1;
 }
 
 // A response message containing data
 message DataResponse {
-  fixed32 val = 1;
+  repeated fixed32 val = 1;
 }

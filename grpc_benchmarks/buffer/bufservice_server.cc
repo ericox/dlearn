@@ -30,7 +30,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
 #include <iostream>
 #include <memory>
 #include <string>
@@ -39,7 +38,7 @@
 
 #include "bufstreaming.grpc.pb.h"
 
-#define BUFSIZE 1 << 12 // maximum buffer size 2**12
+#define BUFSIZE 16000 // maximum buffer size of 64 KB for unsigned long ints
 
 using grpc::Server;
 using grpc::ServerBuilder;
@@ -53,40 +52,42 @@ using bufstreamingrpc::BufferService;
 // Logic and data behind the server's behavior.
 class BufferServiceImpl final : public BufferService::Service {
  public:
-    BufferServiceImpl(const int nmax) {
+    BufferServiceImpl() {
 	int i;
-	// init buffer with arbitrary data
-	for (i = 0; i < nmax; i++) {
-	    DataResponse *d = new DataResponse;
-	    d->set_val(i);
-	    buf[i] = d;
-	}
-	std::cout << i << std::endl;
+	buf = new DataResponse;
+	data = new unsigned long[BUFSIZE];
+
     };
     
   Status Send(ServerContext* context, const BufRequest* request,
 	      ServerWriter<DataResponse>* writer) override {
       int i;
-      long int n = request->n();
+      long int n = request->payload_size();
       long int nsent = 0;
-      // Repeatedly send from buf until request is filled. This allows us to
-      // send large amounts of data without reaching system limits for an
-      // array size on buf.
-      nsent = 0;
-      for (i = 0; nsent < n && n > 0; i++) {
-	      writer->Write(*buf[i % BUFSIZE]);
-	      nsent++;
+      std::cout << "payload size: " << n << std::endl;
+      // Repeatedly send 64KB sized chunks. The protobuf docs mention that performance
+      // is poor if the message sizes are too large. Sending in chunks reduces overhead
+      // of a header per element if we send single values.
+      while(n > 0) {
+	  for (i = 0; i < BUFSIZE && n > 0; i++) {
+	    buf->add_val(i);
+	    n -= 1;
+	  }
+	  writer->Write(*buf);
+	  buf->clear_val();
       }
+      std::cout << "payload size: " << n << std::endl;
     return Status::OK;
   }
  private:
-   DataResponse *buf[BUFSIZE];
-  
+  DataResponse *buf;
+  unsigned long int *data;
 };
+
 
 void RunServer() {
   std::string server_address("0.0.0.0:50051");
-  BufferServiceImpl service(BUFSIZE);
+  BufferServiceImpl service;
 
   ServerBuilder builder; 
   // Listen on the given address without any authentication mechanism.

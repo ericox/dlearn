@@ -57,15 +57,14 @@ class BufferServiceClient {
     BufferServiceClient(std::shared_ptr<Channel> channel, int n)
       : stub_(BufferService::NewStub(channel)) {
 	nmax = n;
-	buf = new unsigned int[nmax];
   }
 
   // Assambles the client's payload, sends it and presents the response back
   // from the server.
-  int Send(const long int& ndata) {
+  int Recv(const int& payload_size) {
     // Data we are sending to the server.
     BufRequest request;
-    request.set_n(ndata);
+    request.set_payload_size(payload_size);
 
     // Container for the data we expect from the server.
     DataResponse reply;
@@ -78,8 +77,7 @@ class BufferServiceClient {
     std::unique_ptr<ClientReader<DataResponse> > reader(stub_->Send(&context, request));
     int n = 0;
     while(reader->Read(&reply)) {
-	buf[n % nmax] = reply.val(); // rewrite buffer using mod
-	n++;
+	n += reply.val_size();
     }
     Status status = reader->Finish();
     
@@ -91,16 +89,9 @@ class BufferServiceClient {
     }
   }
 
-  void PrintBuf(const int n) {
-      int i;
-      for (i = 0; i < n; i++)
-	  std::cout << buf[i] << std::endl;
-  }
-    
  private:
     std::unique_ptr<BufferService::Stub> stub_;
     // refrence to a buffer of 4 byte uints
-    unsigned int *buf;
     int nmax;
 };
 
@@ -120,18 +111,18 @@ int main(int argc, char** argv) {
     // localhost at port 50051). We indicate that the channel isn't authenticated
     // (use of InsecureChannelCredentials()).
     BufferServiceClient bufservice(grpc::CreateChannel(
-	    "geeker-4.news.cs.nyu.edu:50051", grpc::InsecureChannelCredentials()), BUFSIZE);
+	    "localhost:50051", grpc::InsecureChannelCredentials()), BUFSIZE);
 
     // run benchmark to measure roundtrip overhead.
     t = clock();
     for (i = 0; i < NBZERO; i++)
-	reply = bufservice.Send(0);
+	reply = bufservice.Recv(0);
     double tzero = ((double)clock() - (double)t)/CLOCKS_PER_SEC;
 
     // run benchmark for send
     t = clock();
     for (i = 0; i < b; i++)
-	reply = bufservice.Send(nints);
+	reply = bufservice.Recv(nints);
     double tsend = ((double)clock() - (double)t)/CLOCKS_PER_SEC;
 
     std::cout  << reply

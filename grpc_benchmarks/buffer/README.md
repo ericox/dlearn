@@ -26,7 +26,7 @@ service BufferService {
 
 // The request message containing the number of bytes to read.
 message BufRequest {
-   int32 n = 1;
+   int32 payload_size = 1;
 }
 
 // The response message containing the buffer data
