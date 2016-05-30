@@ -76,7 +76,6 @@ class BufferServiceImpl final : public BufferService::Service {
 	  writer->Write(*buf);
 	  buf->clear_val();
       }
-      std::cout << "payload size: " << n << std::endl;
     return Status::OK;
   }
  private:

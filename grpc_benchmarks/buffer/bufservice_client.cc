@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
     // localhost at port 50051). We indicate that the channel isn't authenticated
     // (use of InsecureChannelCredentials()).
     BufferServiceClient bufservice(grpc::CreateChannel(
-	    "localhost:50051", grpc::InsecureChannelCredentials()), BUFSIZE);
+	    "geeker-4.news.cs.nyu.edu:50051", grpc::InsecureChannelCredentials()), BUFSIZE);
 
     // run benchmark to measure roundtrip overhead.
     t = clock();
