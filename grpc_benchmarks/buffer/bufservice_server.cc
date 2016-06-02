@@ -54,45 +54,30 @@ using bufstreamingrpc::BufferService;
 class BufferServiceImpl final : public BufferService::Service {
  public:
     BufferServiceImpl() {
-	int i;
-	// create a buffer char * and every reply create a string * that points
-	// to the buffer using std::string::string. Reply with this buffer.
-	char *buf = new char[BUFSIZE];
-	std::fill(buf, buf + BUFSIZE, '0');
-
     };
     ~BufferServiceImpl() {
 	free(buf);
     };
-    
-  Status Send(ServerContext* context, const BufRequest* request,
-	      ServerWriter<DataResponse>* writer) override {
-      int i;
-      long int n = request->payload_size();
-      long int nsent = 0;
-      std::cout << "payload size: " << n << std::endl;
-      // Repeatedly send 64KB sized chunks. The protobuf docs mention that performance
-      // is poor if the message sizes are too large. Sending in chunks reduces overhead
-      // of a header per element if we send single values.
-      //    buf->add_val(i);
-      //  writer->Write(*buf);
+
+   // Send creates and initalizes a buffer on the fly to send to client.
+   Status Send(ServerContext* context, const BufRequest* request,
+	      DataResponse* resp) override {
+      int n = request->payload_size();
+      buf = new char[BUFSIZE];
+      std::fill(buf, buf + n, '\x00');
+      std::string s1 (buf, n);
+      resp->set_val(s1);
     return Status::OK;
   }
-
-  void PrintBuf() {
-      int i;
-  }
-  
+   
  private:
   char *buf;
 };
-
 
 void RunServer() {
   std::string server_address("0.0.0.0:50051");
   BufferServiceImpl service;
 
-  service.PrintBuf();
   ServerBuilder builder; 
   // Listen on the given address without any authentication mechanism.
   builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
@@ -110,6 +95,5 @@ void RunServer() {
 
 int main(int argc, char** argv) {
   RunServer();
-
   return 0;
 }

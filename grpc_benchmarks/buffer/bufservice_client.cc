@@ -73,17 +73,11 @@ class BufferServiceClient {
     // the server and/or tweak certain RPC behaviors.
     ClientContext context;
 
-    // Read byte stream from reader.
-    std::unique_ptr<ClientReader<DataResponse> > reader(stub_->Send(&context, request));
-    int n = 0;
-    while(reader->Read(&reply)) {
-	n += reply.val_size();
-    }
-    Status status = reader->Finish();
+    // get buffer from server from reader.
+    Status status = stub_->Send(&context, request, &reply);
     
-    // Act upon its status.
     if (status.ok()) {
-      return n;
+      return 0;
     } else {
       return -1;
     }
@@ -111,23 +105,15 @@ int main(int argc, char** argv) {
     // localhost at port 50051). We indicate that the channel isn't authenticated
     // (use of InsecureChannelCredentials()).
     BufferServiceClient bufservice(grpc::CreateChannel(
-	    "geeker-4.news.cs.nyu.edu:50051", grpc::InsecureChannelCredentials()), BUFSIZE);
-
-    // run benchmark to measure roundtrip overhead.
-    t = clock();
-    for (i = 0; i < NBZERO; i++)
-	reply = bufservice.Recv(0);
-    double tzero = ((double)clock() - (double)t)/CLOCKS_PER_SEC;
+	    "localhost:50051", grpc::InsecureChannelCredentials()), BUFSIZE);
 
     // run benchmark for send
     t = clock();
-    for (i = 0; i < b; i++)
-	reply = bufservice.Recv(nints);
+    reply = bufservice.Recv(nints);
     double tsend = ((double)clock() - (double)t)/CLOCKS_PER_SEC;
 
     std::cout  << reply
 	       << ", " << reply*4
-	       << ", " << tzero / NBZERO
-	       << ", " << tsend / ((double)b) << std::endl;
+	       << ", " << tsend << std::endl;
     return 0;
 }
