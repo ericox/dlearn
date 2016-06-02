@@ -89,13 +89,12 @@ int main(int argc, char** argv) {
     int i;
     DataResponse reply;
     clock_t t;
-    int nints, b;
-    if (argc < 3) {
+    int nints;
+    if (argc < 2) {
 	std::cout << "usage: bufservice_client BUFSIZE" << std::endl;
 	return 1;
     }
     nints = atoi(argv[1]);
-    b = atoi(argv[2]);
 
     // Instantiate the client. It requires a channel, out of which the actual RPCs
     // are created. This channel models a connection to an endpoint (in this case,
