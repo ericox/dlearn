@@ -41,9 +41,6 @@
 
 #include "bufstreaming.grpc.pb.h"
 
-#define NBZERO 1000 // benchmark iterations for handshake overhead
-#define BUFSIZE 16384 // buffer size
-
 using grpc::Channel;
 using grpc::ClientContext;
 using grpc::ClientReader;
@@ -52,16 +49,15 @@ using bufstreamingrpc::BufRequest;
 using bufstreamingrpc::DataResponse;
 using bufstreamingrpc::BufferService;
 
+    
 class BufferServiceClient {
  public:
-    BufferServiceClient(std::shared_ptr<Channel> channel, int n)
-      : stub_(BufferService::NewStub(channel)) {
-	nmax = n;
-  }
+    BufferServiceClient(std::shared_ptr<Channel> channel)
+	: stub_(BufferService::NewStub(channel)) {}
 
   // Assambles the client's payload, sends it and presents the response back
   // from the server.
-  int Recv(const int& payload_size) {
+  DataResponse Recv(const int& payload_size) {
     // Data we are sending to the server.
     BufRequest request;
     request.set_payload_size(payload_size);
@@ -77,9 +73,9 @@ class BufferServiceClient {
     Status status = stub_->Send(&context, request, &reply);
     
     if (status.ok()) {
-      return 0;
+      return reply;
     } else {
-      return -1;
+      return reply;
     }
   }
 
@@ -90,11 +86,12 @@ class BufferServiceClient {
 };
 
 int main(int argc, char** argv) {
-    int i, reply;
+    int i;
+    DataResponse reply;
     clock_t t;
     int nints, b;
     if (argc < 3) {
-	std::cout << "usage: bufservice_client NINTS BENCHMARKITER" << std::endl;
+	std::cout << "usage: bufservice_client BUFSIZE" << std::endl;
 	return 1;
     }
     nints = atoi(argv[1]);
@@ -105,15 +102,15 @@ int main(int argc, char** argv) {
     // localhost at port 50051). We indicate that the channel isn't authenticated
     // (use of InsecureChannelCredentials()).
     BufferServiceClient bufservice(grpc::CreateChannel(
-	    "localhost:50051", grpc::InsecureChannelCredentials()), BUFSIZE);
+	    "geeker-4.news.cs.nyu.edu:50051", grpc::InsecureChannelCredentials()));
 
     // run benchmark for send
     t = clock();
     reply = bufservice.Recv(nints);
     double tsend = ((double)clock() - (double)t)/CLOCKS_PER_SEC;
 
-    std::cout  << reply
-	       << ", " << reply*4
+    std::cout  << reply.ByteSize()
+	       << ", " << reply.val().size()
 	       << ", " << tsend << std::endl;
     return 0;
 }
