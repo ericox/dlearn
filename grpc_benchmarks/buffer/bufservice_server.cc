@@ -33,12 +33,13 @@
 #include <iostream>
 #include <memory>
 #include <string>
-
+#include <algorithm>
+#include <stdlib.h>
 #include <grpc++/grpc++.h>
 
 #include "bufstreaming.grpc.pb.h"
 
-#define BUFSIZE 16000 // maximum buffer size of 64 KB for unsigned long ints
+#define BUFSIZE 1000000000 // maximum buffer size of 10 GB 
 
 using grpc::Server;
 using grpc::ServerBuilder;
@@ -54,9 +55,14 @@ class BufferServiceImpl final : public BufferService::Service {
  public:
     BufferServiceImpl() {
 	int i;
-	buf = new DataResponse;
-	data = new unsigned long[BUFSIZE];
+	// create a buffer char * and every reply create a string * that points
+	// to the buffer using std::string::string. Reply with this buffer.
+	char *buf = new char[BUFSIZE];
+	std::fill(buf, buf + BUFSIZE, '0');
 
+    };
+    ~BufferServiceImpl() {
+	free(buf);
     };
     
   Status Send(ServerContext* context, const BufRequest* request,
@@ -68,19 +74,17 @@ class BufferServiceImpl final : public BufferService::Service {
       // Repeatedly send 64KB sized chunks. The protobuf docs mention that performance
       // is poor if the message sizes are too large. Sending in chunks reduces overhead
       // of a header per element if we send single values.
-      while(n > 0) {
-	  for (i = 0; i < BUFSIZE && n > 0; i++) {
-	    buf->add_val(i);
-	    n -= 1;
-	  }
-	  writer->Write(*buf);
-	  buf->clear_val();
-      }
+      //    buf->add_val(i);
+      //  writer->Write(*buf);
     return Status::OK;
   }
+
+  void PrintBuf() {
+      int i;
+  }
+  
  private:
-  DataResponse *buf;
-  unsigned long int *data;
+  char *buf;
 };
 
 
@@ -88,6 +92,7 @@ void RunServer() {
   std::string server_address("0.0.0.0:50051");
   BufferServiceImpl service;
 
+  service.PrintBuf();
   ServerBuilder builder; 
   // Listen on the given address without any authentication mechanism.
   builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
