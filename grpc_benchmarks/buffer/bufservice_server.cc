@@ -54,17 +54,17 @@ using bufstreamingrpc::BufferService;
 class BufferServiceImpl final : public BufferService::Service {
  public:
     BufferServiceImpl() {
+	      buf = new char[BUFSIZE];
+	      std::fill(buf, buf + BUFSIZE, '\x00');
     };
     ~BufferServiceImpl() {
 	free(buf);
     };
 
-   // Send creates and initalizes a buffer on the fly to send to client.
+   // Send encodes data in buf on the fly to send to client.
    Status Send(ServerContext* context, const BufRequest* request,
 	      DataResponse* resp) override {
       int n = request->payload_size();
-      buf = new char[BUFSIZE];
-      std::fill(buf, buf + n, '\x00');
       std::string s1 (buf, n);
       resp->set_val(s1);
     return Status::OK;

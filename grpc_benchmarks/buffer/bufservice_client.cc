@@ -86,30 +86,29 @@ class BufferServiceClient {
 };
 
 int main(int argc, char** argv) {
-    int i;
-    DataResponse reply;
-    clock_t t;
-    int nints;
     if (argc < 2) {
 	std::cout << "usage: bufservice_client BUFSIZE" << std::endl;
 	return 1;
     }
-    nints = atoi(argv[1]);
+    int payload_size = atoi(argv[1]);
 
     // Instantiate the client. It requires a channel, out of which the actual RPCs
     // are created. This channel models a connection to an endpoint (in this case,
     // localhost at port 50051). We indicate that the channel isn't authenticated
     // (use of InsecureChannelCredentials()).
     BufferServiceClient bufservice(grpc::CreateChannel(
-	    "geeker-4.news.cs.nyu.edu:50051", grpc::InsecureChannelCredentials()));
+	    "localhost:50051", grpc::InsecureChannelCredentials()));
 
-    // run benchmark for send
-    t = clock();
-    reply = bufservice.Recv(nints);
-    double tsend = ((double)clock() - (double)t)/CLOCKS_PER_SEC;
+    // Time a single rpc recv-send for a buffer size of n.
+    DataResponse reply;
+    clock_t t = clock();
+    reply = bufservice.Recv(payload_size);
+    t = clock() - t;
+    float t_total = ((float)t)/CLOCKS_PER_SEC;
 
     std::cout  << reply.ByteSize()
 	       << ", " << reply.val().size()
-	       << ", " << tsend << std::endl;
+	       << ", " << t_total << std::endl;
+    
     return 0;
 }
