@@ -33,13 +33,16 @@
 #include <iostream>
 #include <memory>
 #include <string>
-#include <time.h>
+#include <chrono>
+#include <fstream>
 #include <unistd.h>
 #include <stdlib.h>
 
 #include <grpc++/grpc++.h>
 
 #include "bufstreaming.grpc.pb.h"
+
+using namespace std::chrono;
 
 using grpc::Channel;
 using grpc::ClientContext;
@@ -71,13 +74,27 @@ class BufferServiceClient {
 
     // get buffer from server from reader.
     Status status = stub_->Send(&context, request, &reply);
-    
     if (status.ok()) {
       return reply;
     } else {
       return reply;
     }
   }
+    
+  void RunBench(const int& payload_size, int nruns) {
+    DataResponse reply;
+    int i;
+    steady_clock::time_point t1 = steady_clock::now();
+    for(i = 0; i < 100; i++)
+        reply = Recv(payload_size);
+    steady_clock::time_point t2 = steady_clock::now();
+    std::cout  << reply.ByteSize()
+	       << ", " << reply.val().size()
+	       << ", " << ((float)(nanoseconds(t2-t1).count()) / 1e9) / 100 << std::endl;
+  }
+    
+  void WritePayload(std::string filename) {}
+  std::string md5sum(std::string filename) {}
 
  private:
     std::unique_ptr<BufferService::Stub> stub_;
@@ -99,16 +116,8 @@ int main(int argc, char** argv) {
     BufferServiceClient bufservice(grpc::CreateChannel(
 	    "localhost:50051", grpc::InsecureChannelCredentials()));
 
-    // Time a single rpc recv-send for a buffer size of n.
-    DataResponse reply;
-    clock_t t = clock();
-    reply = bufservice.Recv(payload_size);
-    t = clock() - t;
-    float t_total = ((float)t)/CLOCKS_PER_SEC;
-
-    std::cout  << reply.ByteSize()
-	       << ", " << reply.val().size()
-	       << ", " << t_total << std::endl;
-    
+    // Time a single rpc recv-send for a buffer size of n and an average of 100
+    // requests.
+    bufservice.RunBench(payload_size, 100);
     return 0;
 }
