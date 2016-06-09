@@ -43,6 +43,7 @@ service BufferService {
 // The request message containing how many ints are sent
 message BufRequest {
   int32 payload_size = 1;
+  bool debug = 2;  
 }
 
 // A response message containing data

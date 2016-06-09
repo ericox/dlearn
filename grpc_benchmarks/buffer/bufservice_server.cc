@@ -33,6 +33,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <fstream>
 #include <algorithm>
 #include <stdlib.h>
 #include <grpc++/grpc++.h>
@@ -55,7 +56,7 @@ class BufferServiceImpl final : public BufferService::Service {
  public:
     BufferServiceImpl() {
 	      buf = new char[BUFSIZE];
-	      std::fill(buf, buf + BUFSIZE, '\x00');
+	      std::fill(buf, buf + BUFSIZE, 'a');
     };
     ~BufferServiceImpl() {
 	free(buf);
@@ -64,10 +65,22 @@ class BufferServiceImpl final : public BufferService::Service {
    // Send encodes data in buf on the fly to send to client.
    Status Send(ServerContext* context, const BufRequest* request,
 	      DataResponse* resp) override {
-      int n = request->payload_size();
-      std::string s1 (buf, n);
-      resp->set_val(s1);
+   int n = request->payload_size();
+   std::string s1 (buf, n);
+   resp->set_val(s1);
+   if (request->debug()) {
+       WritePayload("debug_payload_srv.out", resp);
+    }
     return Status::OK;
+  }
+   
+  int WritePayload(std::string filename, DataResponse* resp) {
+      std::fstream output(filename, std::ios::out | std::ios::binary);
+      if (!resp->SerializeToOstream(&output)) {
+          std::cerr << "Failed to write buffer." << std::endl;
+          return -1;
+      }
+      return 0;
   }
    
  private:

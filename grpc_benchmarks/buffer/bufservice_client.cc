@@ -60,10 +60,15 @@ class BufferServiceClient {
 
   // Assambles the client's payload, sends it and presents the response back
   // from the server.
-  DataResponse Recv(const int& payload_size) {
+  DataResponse Recv(const int& payload_size, const bool& debug) {
     // Data we are sending to the server.
     BufRequest request;
     request.set_payload_size(payload_size);
+    if (debug) {
+        request.set_debug(true);
+    } else {
+        request.set_debug(false);
+    }
 
     // Container for the data we expect from the server.
     DataResponse reply;
@@ -81,20 +86,32 @@ class BufferServiceClient {
     }
   }
     
-  void RunBench(const int& payload_size, int nruns) {
-    DataResponse reply;
+  void RunBench(const int& payload_size, std::string filename, int nruns) {
     int i;
+    DataResponse reply;
+    // Run one request with debug true to dump message on server
+    reply = Recv(payload_size, true);
+
+    // Time roundtrip for sending a buffer of chars payload_size in length.
     steady_clock::time_point t1 = steady_clock::now();
-    for(i = 0; i < 100; i++)
-        reply = Recv(payload_size);
+    for(i = 0; i < nruns; i++)
+        reply = Recv(payload_size, false);
     steady_clock::time_point t2 = steady_clock::now();
     std::cout  << reply.ByteSize()
 	       << ", " << reply.val().size()
-	       << ", " << ((float)(nanoseconds(t2-t1).count()) / 1e9) / 100 << std::endl;
+	       << ", " << ((float)(nanoseconds(t2-t1).count()) / 1e9) / nruns << std::endl;
+
+    WritePayload(filename, &reply);
   }
     
-  void WritePayload(std::string filename) {}
-  std::string md5sum(std::string filename) {}
+  int WritePayload(std::string filename, DataResponse* resp) {
+      std::fstream output(filename, std::ios::out | std::ios::binary);
+      if (!resp->SerializeToOstream(&output)) {
+          std::cerr << "Failed to write buffer." << std::endl;
+          return -1;
+      }
+      return 0;
+  }
 
  private:
     std::unique_ptr<BufferService::Stub> stub_;
@@ -103,8 +120,8 @@ class BufferServiceClient {
 };
 
 int main(int argc, char** argv) {
-    if (argc < 2) {
-	std::cout << "usage: bufservice_client BUFSIZE" << std::endl;
+    if (argc < 3) {
+	std::cout << "usage: bufservice_client BUFSIZE DEBUGFILE" << std::endl;
 	return 1;
     }
     int payload_size = atoi(argv[1]);
@@ -118,6 +135,7 @@ int main(int argc, char** argv) {
 
     // Time a single rpc recv-send for a buffer size of n and an average of 100
     // requests.
-    bufservice.RunBench(payload_size, 100);
+    bufservice.RunBench(payload_size, std::string(argv[2]), 100);
+
     return 0;
 }
