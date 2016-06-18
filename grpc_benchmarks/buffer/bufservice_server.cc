@@ -39,8 +39,9 @@
 #include <grpc++/grpc++.h>
 
 #include "bufstreaming.grpc.pb.h"
+#include "grpc_byte_buffer.h"
 
-#define BUFSIZE 1000000000 // maximum buffer size of 10 GB 
+#define BUFSIZE 1000000000 // maximum buffer size of 128 MB 
 
 using grpc::Server;
 using grpc::ServerBuilder;
@@ -53,7 +54,7 @@ using bufstreamingrpc::BufferService;
 
 // Logic and data behind the server's behavior.
 class BufferServiceImpl final : public BufferService::Service {
- public:
+  public:
     BufferServiceImpl() {
 	      buf = new char[BUFSIZE];
 	      std::fill(buf, buf + BUFSIZE, 'a');
@@ -65,13 +66,13 @@ class BufferServiceImpl final : public BufferService::Service {
    // Send encodes data in buf on the fly to send to client.
    Status Send(ServerContext* context, const BufRequest* request,
 	      DataResponse* resp) override {
-   int n = request->payload_size();
-   std::string s1 (buf, n);
-   resp->set_val(s1);
-   if (request->debug()) {
+     int n = request->payload_size();
+     std::string s1 (buf, n);
+     resp->set_val(s1);
+     if (request->debug()) {
        WritePayload("debug_payload_srv.out", resp);
-    }
-    return Status::OK;
+     }
+     return Status::OK;
   }
    
   int WritePayload(std::string filename, DataResponse* resp) {
@@ -91,7 +92,12 @@ void RunServer() {
   std::string server_address("0.0.0.0:50051");
   BufferServiceImpl service;
 
-  ServerBuilder builder; 
+  ServerBuilder builder;
+
+  // Set max message size in bytes. This allows us to handle large message sizes.
+  std::cout << "SettingMaxMessageSize to " << BUFSIZE << std::endl;
+  builder.SetMaxMessageSize(BUFSIZE);
+  
   // Listen on the given address without any authentication mechanism.
   builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
   // Register "service" as the instance through which we'll communicate with
