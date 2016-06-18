@@ -41,6 +41,7 @@
 #include <grpc++/grpc++.h>
 
 #include "bufstreaming.grpc.pb.h"
+#define BUFSIZE 1000000000 // maximum buffer size of 128 MB
 
 using namespace std::chrono;
 
@@ -51,12 +52,18 @@ using grpc::Status;
 using bufstreamingrpc::BufRequest;
 using bufstreamingrpc::DataResponse;
 using bufstreamingrpc::BufferService;
+using bufstreamingrpc::SendBufResponse;
+using bufstreamingrpc::SendBufRequest;
 
     
 class BufferServiceClient {
  public:
     BufferServiceClient(std::shared_ptr<Channel> channel)
-	: stub_(BufferService::NewStub(channel)) {}
+	: stub_(BufferService::NewStub(channel)) {
+      	      buf = new char[BUFSIZE];
+	      std::fill(buf, buf + BUFSIZE, 'a');
+    };
+  ~BufferServiceClient() { free(buf); };
 
   // Assambles the client's payload, sends it and presents the response back
   // from the server.
@@ -85,23 +92,49 @@ class BufferServiceClient {
       return reply;
     }
   }
-    
+
+  SendBufResponse SendBuf(const int& payload_size) {
+    SendBufRequest request;
+    std::string s1(buf, payload_size);
+    request.set_buf(s1);
+    request.set_payload_size(payload_size);
+
+    SendBufResponse reply;
+
+    ClientContext context;
+
+    Status status = stub_->SendBuf(&context, request, &reply);
+    if (status.ok()) {
+      return reply;
+    } else {
+      return reply;
+    }
+  }
+  
   void RunBench(const int& payload_size, std::string filename, int nruns) {
     int i;
-    DataResponse reply;
+    // DataResponse reply;
     // Run one request with debug true to dump message on server
-    reply = Recv(payload_size, true);
+    //reply = Recv(payload_size, true);
+    SendBufResponse reply;
+    reply = SendBuf(payload_size);
 
     // Time roundtrip for sending a buffer of chars payload_size in length.
     steady_clock::time_point t1 = steady_clock::now();
     for(i = 0; i < nruns; i++)
-        reply = Recv(payload_size, false);
+      //reply = Recv(payload_size, false);
+      reply = SendBuf(payload_size);
     steady_clock::time_point t2 = steady_clock::now();
+    /*
     std::cout  << reply.ByteSize()
 	       << ", " << reply.val().size()
 	       << ", " << ((float)(nanoseconds(t2-t1).count()) / 1e9) / nruns << std::endl;
+    */
+    std::cout  << reply.ByteSize()
+	       << ", " << payload_size
+	       << ", " << ((float)(nanoseconds(t2-t1).count()) / 1e9) / nruns << std::endl;
 
-    WritePayload(filename, &reply);
+    //WritePayload(filename, &reply);
   }
     
   int WritePayload(std::string filename, DataResponse* resp) {
@@ -117,6 +150,7 @@ class BufferServiceClient {
     std::unique_ptr<BufferService::Stub> stub_;
     // refrence to a buffer of 4 byte uints
     int nmax;
+  char *buf;
 };
 
 int main(int argc, char** argv) {

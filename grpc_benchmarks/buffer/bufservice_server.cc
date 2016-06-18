@@ -50,7 +50,10 @@ using grpc::ServerWriter;
 using grpc::Status;
 using bufstreamingrpc::BufRequest;
 using bufstreamingrpc::DataResponse;
+using bufstreamingrpc::SendBufRequest;
+using bufstreamingrpc::SendBufResponse;
 using bufstreamingrpc::BufferService;
+
 
 // Logic and data behind the server's behavior.
 class BufferServiceImpl final : public BufferService::Service {
@@ -74,6 +77,15 @@ class BufferServiceImpl final : public BufferService::Service {
      }
      return Status::OK;
   }
+
+   Status SendBuf(ServerContext* context, const SendBufRequest* request,
+                  SendBufResponse* resp) override {
+     int n = request->payload_size();
+     std::memcpy(buf, &request->buf(), sizeof request->buf());
+     resp->set_payload_size(n);
+     std::cout << "Recv: " << n << " bytes" << std::endl;
+     return Status::OK;
+   }
    
   int WritePayload(std::string filename, DataResponse* resp) {
       std::fstream output(filename, std::ios::out | std::ios::binary);

@@ -38,6 +38,7 @@ package bufstreamingrpc;
 service BufferService {
   // Send streams DataResponses to the client
   rpc Send (BufRequest) returns (DataResponse) {}
+  rpc SendBuf (SendBufRequest) returns (SendBufResponse) {}
 }
 
 // The request message containing how many ints are sent
@@ -49,4 +50,14 @@ message BufRequest {
 // A response message containing data
 message DataResponse {
   bytes val = 1;
+}
+
+// Send a buffer to the server
+message SendBufRequest {
+  bytes buf = 1;
+  int32 payload_size = 2;
+}
+
+message SendBufResponse {
+  int32 payload_size = 1;
 }
