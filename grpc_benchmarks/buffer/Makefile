@@ -30,9 +30,9 @@
 #
 
 CXX = g++
-CPPFLAGS += -I/usr/local/include -pthread
+CPPFLAGS += -I/home/eric/local/include -pthread
 CXXFLAGS += -std=c++11
-LDFLAGS += -L/usr/local/lib `pkg-config --libs grpc++` -lprotobuf -lpthread -ldl
+LDFLAGS += -L/home/eric/local/lib `pkg-config --libs grpc++` -lprotobuf -lpthread -ldl
 PROTOC = protoc
 GRPC_CPP_PLUGIN = grpc_cpp_plugin
 GRPC_CPP_PLUGIN_PATH ?= `which $(GRPC_CPP_PLUGIN)`

@@ -39,9 +39,8 @@
 #include <grpc++/grpc++.h>
 
 #include "bufstreaming.grpc.pb.h"
-#include "grpc_byte_buffer.h"
 
-#define BUFSIZE 1000000000 // maximum buffer size of 128 MB 
+#define BUFSIZE 1500000000 // maximum buffer size of 128 MB 
 
 using grpc::Server;
 using grpc::ServerBuilder;

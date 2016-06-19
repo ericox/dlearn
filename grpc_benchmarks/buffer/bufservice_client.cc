@@ -41,7 +41,7 @@
 #include <grpc++/grpc++.h>
 
 #include "bufstreaming.grpc.pb.h"
-#define BUFSIZE 1000000000 // maximum buffer size of 128 MB
+
 
 using namespace std::chrono;
 
@@ -55,7 +55,8 @@ using bufstreamingrpc::BufferService;
 using bufstreamingrpc::SendBufResponse;
 using bufstreamingrpc::SendBufRequest;
 
-    
+const int BUFSIZE = 1500000000; // maximum buffer size of 128 MB    
+
 class BufferServiceClient {
  public:
     BufferServiceClient(std::shared_ptr<Channel> channel)
@@ -165,7 +166,7 @@ int main(int argc, char** argv) {
     // localhost at port 50051). We indicate that the channel isn't authenticated
     // (use of InsecureChannelCredentials()).
     BufferServiceClient bufservice(grpc::CreateChannel(
-	    "localhost:50051", grpc::InsecureChannelCredentials()));
+	    "geeker-4.news.cs.nyu.edu:50051", grpc::InsecureChannelCredentials()));
 
     // Time a single rpc recv-send for a buffer size of n and an average of 100
     // requests.
