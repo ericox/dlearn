@@ -94,16 +94,15 @@ class BufferServiceClient {
     }
   }
 
-  SendBufResponse SendBuf(const int& payload_size) {
+  SendBufResponse SendBuf(const int& payload_size, const bool debug) {
     SendBufRequest request;
     std::string s1(buf, payload_size);
     request.set_buf(s1);
+    request.set_debug(debug);
     request.set_payload_size(payload_size);
 
     SendBufResponse reply;
-
     ClientContext context;
-
     Status status = stub_->SendBuf(&context, request, &reply);
     if (status.ok()) {
       return reply;
@@ -117,14 +116,15 @@ class BufferServiceClient {
     // DataResponse reply;
     // Run one request with debug true to dump message on server
     //reply = Recv(payload_size, true);
-    SendBufResponse reply;
-    reply = SendBuf(payload_size);
 
+    SendBufResponse reply;
+    reply = SendBuf(payload_size, true);
+    
     // Time roundtrip for sending a buffer of chars payload_size in length.
     steady_clock::time_point t1 = steady_clock::now();
     for(i = 0; i < nruns; i++)
       //reply = Recv(payload_size, false);
-      reply = SendBuf(payload_size);
+      reply = SendBuf(payload_size, false);
     steady_clock::time_point t2 = steady_clock::now();
     /*
     std::cout  << reply.ByteSize()

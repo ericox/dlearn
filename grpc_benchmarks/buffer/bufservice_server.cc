@@ -83,6 +83,9 @@ class BufferServiceImpl final : public BufferService::Service {
      std::memcpy(buf, &request->buf(), sizeof request->buf());
      resp->set_payload_size(n);
      std::cout << "Recv: " << n << " bytes" << std::endl;
+     if (request->debug()) {
+       WritePayload("debug_payload_srv.out", request);
+     }
      return Status::OK;
    }
    
@@ -94,7 +97,16 @@ class BufferServiceImpl final : public BufferService::Service {
       }
       return 0;
   }
-   
+
+  int WritePayload(std::string filename, const SendBufRequest* req) {
+      std::fstream output(filename, std::ios::out | std::ios::binary);
+      if (!req->SerializeToOstream(&output)) {
+          std::cerr << "Failed to write buffer." << std::endl;
+          return -1;
+      }
+      return 0;
+  }
+
  private:
   char *buf;
 };
